@@ -73,6 +73,8 @@ services:
     redis:
         image: redis:latest
         restart: unless-stopped
+        ports:
+            - 6379:6379
         networks:
             - lara_socketio_net
 
