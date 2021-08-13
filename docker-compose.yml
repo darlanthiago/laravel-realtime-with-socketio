@@ -1,0 +1,81 @@
+version: "3.7"
+
+services:
+    # imagem micro-01
+    lara_socketio:
+        build:
+            args:
+                user: laravel
+                uid: 1000
+            context: ./
+            dockerfile: Dockerfile
+        extra_hosts:
+            - "host.docker.internal:host-gateway"
+        depends_on:
+            - redis
+            - queue
+        image: laravel-app
+        restart: unless-stopped
+        working_dir: /var/www/
+        volumes:
+            - ./:/var/www
+        networks:
+            - lara_socketio_net
+
+    # queue
+    queue:
+        build:
+            args:
+                user: laravel
+                uid: 1000
+            context: ./
+            dockerfile: Dockerfile
+        command: 'php artisan queue:work'
+        restart: unless-stopped
+        volumes:
+            - ./:/var/www
+        depends_on:
+            - redis
+        networks:
+            - lara_socketio_net
+
+    #nginx
+    nginx:
+        image: nginx:alpine
+        restart: unless-stopped
+        ports:
+            - 8000:80
+        volumes:
+            - ./:/var/www
+            - ./docker/nginx/:/etc/nginx/conf.d/
+        networks:
+            - lara_socketio_net
+        extra_hosts:
+            - "host.docker.internal:host-gateway"
+
+    # database
+    db-lara-socketio:
+        image: mariadb
+        restart: unless-stopped
+        environment:
+            MYSQL_DATABASE: ${DB_DATABASE}
+            MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+            MYSQL_PASSWORD: ${DB_PASSWORD}
+            MYSQL_USER: ${DB_USERNAME}
+        ports:
+            - 3306:3306
+        volumes:
+            - ./.docker/mysql/dbdata:/var/lib/mysql
+        networks:
+            - lara_socketio_net
+
+    # redis
+    redis:
+        image: redis:latest
+        restart: unless-stopped
+        networks:
+            - lara_socketio_net
+
+networks:
+    lara_socketio_net:
+        driver: bridge
